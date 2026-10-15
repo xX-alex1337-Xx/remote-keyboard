@@ -1,133 +1,87 @@
 import os
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 
-def render_remote_keyboard_glyph(size, bg_color=None, padding_ratio=0.10):
-    """
-    Renders a crisp, Windows 11 Fluent style keyboard + wireless signal glyph.
-    If bg_color is None, background is fully transparent (for tray icon & favicon).
-    If bg_color is provided (e.g. (0,0,0,255)), renders solid OLED background (for iOS touch icon).
-    """
-    # Supersampling 4x for crystal clear anti-aliasing
+def render_centered_icon(size, bg_color=None, padding_ratio=0.08):
     scale = 4
     canvas_size = size * scale
     
-    if bg_color:
-        img = Image.new("RGBA", (canvas_size, canvas_size), bg_color)
-    else:
-        img = Image.new("RGBA", (canvas_size, canvas_size), (0, 0, 0, 0))
-        
-    draw = ImageDraw.Draw(img)
-    
+    # 1. High-resolution scratch canvas
+    scratch_size = canvas_size * 2
+    scratch = Image.new("RGBA", (scratch_size, scratch_size), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(scratch)
     white = (255, 255, 255, 255)
     
-    pad = canvas_size * padding_ratio
-    w = canvas_size - 2 * pad
-    h = canvas_size - 2 * pad
-    cx = canvas_size / 2
+    font_size = int(canvas_size * 0.68)
+    font = ImageFont.truetype("C:/Windows/Fonts/SegoeIcons.ttf", font_size)
     
-    # Proportions:
-    # Top 36% of height: Wireless / Remote signal arcs
-    # Bottom 60% of height: Keyboard body
+    # Draw keyboard at scratch center
+    kb_x = int(scratch_size * 0.25)
+    kb_y = int(scratch_size * 0.35)
+    draw.text((kb_x, kb_y), "\uE765", font=font, fill=white)
     
-    stroke = max(2 * scale, int(canvas_size * 0.055))
+    # Measure keyboard bounds
+    kb_img_temp = Image.new("RGBA", (scratch_size, scratch_size), (0, 0, 0, 0))
+    ImageDraw.Draw(kb_img_temp).text((kb_x, kb_y), "\uE765", font=font, fill=white)
+    bbox = kb_img_temp.getbbox()
     
-    # 1. Keyboard Body
-    kb_w = w * 0.90
-    kb_h = h * 0.52
-    kb_x0 = cx - kb_w / 2
-    kb_y0 = canvas_size - pad - kb_h
-    kb_x1 = cx + kb_w / 2
-    kb_y1 = canvas_size - pad
-    corner_r = kb_h * 0.22
+    kb_w = bbox[2] - bbox[0]
+    kb_h = bbox[3] - bbox[1]
+    kb_corner_x = bbox[2]
+    kb_corner_y = bbox[1]
     
-    # Draw keyboard outline
-    draw.rounded_rectangle(
-        [kb_x0, kb_y0, kb_x1, kb_y1],
-        radius=corner_r,
-        outline=white,
-        width=stroke
-    )
+    # Signal arcs radiating from top-right corner
+    origin_x = kb_corner_x - int(kb_w * 0.10)
+    origin_y = kb_corner_y + int(kb_h * 0.12)
+    stroke = max(2 * scale, int(font_size * 0.058))
     
-    # Internal keys:
-    # Row 1 dots: 4 key dots
-    # Row 2 dots: 4 key dots
-    # Row 3: Spacebar line
-    inner_pad_x = kb_w * 0.16
-    inner_w = kb_w - 2 * inner_pad_x
+    r1 = int(kb_h * 0.28)
+    r2 = int(kb_h * 0.52)
     
-    row1_y = kb_y0 + kb_h * 0.28
-    row2_y = kb_y0 + kb_h * 0.53
-    row3_y = kb_y0 + kb_h * 0.77
+    draw.arc([origin_x - r1, origin_y - r1, origin_x + r1, origin_y + r1],
+             start=265, end=365, fill=white, width=stroke)
+    draw.arc([origin_x - r2, origin_y - r2, origin_x + r2, origin_y + r2],
+             start=265, end=365, fill=white, width=stroke)
+             
+    # Now get the combined bounding box of keyboard + arcs
+    combo_bbox = scratch.getbbox()
+    combo_w = combo_bbox[2] - combo_bbox[0]
+    combo_h = combo_bbox[3] - combo_bbox[1]
     
-    dot_r = max(scale, int(kb_w * 0.038))
+    # Crop the exact glyph
+    cropped = scratch.crop(combo_bbox)
     
-    # 4 dots row 1
-    for i in range(4):
-        x = kb_x0 + inner_pad_x + (inner_w * i / 3.0)
-        draw.ellipse([x - dot_r, row1_y - dot_r, x + dot_r, row1_y + dot_r], fill=white)
+    # Scale cropped image to fit within target canvas leaving padding
+    avail_w = canvas_size * (1.0 - 2 * padding_ratio)
+    avail_h = canvas_size * (1.0 - 2 * padding_ratio)
+    
+    scale_factor = min(avail_w / combo_w, avail_h / combo_h)
+    new_w = max(1, int(combo_w * scale_factor))
+    new_h = max(1, int(combo_h * scale_factor))
+    
+    scaled_glyph = cropped.resize((new_w, new_h), Image.Resampling.LANCZOS)
+    
+    # Final canvas with background
+    if bg_color:
+        final_canvas = Image.new("RGBA", (canvas_size, canvas_size), bg_color)
+    else:
+        final_canvas = Image.new("RGBA", (canvas_size, canvas_size), (0, 0, 0, 0))
         
-    # 4 dots row 2
-    for i in range(4):
-        # Slightly offset staggered row
-        offset = (inner_w / 6.0) if i % 2 == 1 else 0
-        x = kb_x0 + inner_pad_x + (inner_w * (i + 0.2) / 3.4)
-        draw.ellipse([x - dot_r, row2_y - dot_r, x + dot_r, row2_y + dot_r], fill=white)
-        
-    # Spacebar line
-    space_w = inner_w * 0.50
-    draw.rounded_rectangle(
-        [cx - space_w / 2, row3_y - stroke / 2, cx + space_w / 2, row3_y + stroke / 2],
-        radius=stroke / 2,
-        fill=white
-    )
+    pos_x = (canvas_size - new_w) // 2
+    pos_y = (canvas_size - new_h) // 2
+    final_canvas.paste(scaled_glyph, (pos_x, pos_y), scaled_glyph)
     
-    # 2. Wireless / Remote Signal Arcs (above keyboard)
-    # Origin of signal is at top center of keyboard: (cx, kb_y0)
-    # Radiating upwards: 2 smooth concentric arcs
-    signal_origin_y = kb_y0 + kb_h * 0.05
-    
-    # Outer arc
-    r_outer = kb_h * 0.68
-    draw.arc(
-        [cx - r_outer, signal_origin_y - r_outer, cx + r_outer, signal_origin_y + r_outer],
-        start=215,
-        end=325,
-        fill=white,
-        width=stroke
-    )
-    
-    # Inner arc
-    r_inner = kb_h * 0.40
-    draw.arc(
-        [cx - r_inner, signal_origin_y - r_inner, cx + r_inner, signal_origin_y + r_inner],
-        start=205,
-        end=335,
-        fill=white,
-        width=stroke
-    )
-    
-    # Small center pulse dot
-    pulse_r = max(scale, int(dot_r * 1.1))
-    draw.ellipse(
-        [cx - pulse_r, signal_origin_y - kb_h * 0.14 - pulse_r, cx + pulse_r, signal_origin_y - kb_h * 0.14 + pulse_r],
-        fill=white
-    )
-
-    # Downsample using high quality Lanczos resampling
-    final_img = img.resize((size, size), Image.Resampling.LANCZOS)
-    return final_img
+    # Downsample to target size
+    return final_canvas.resize((size, size), Image.Resampling.LANCZOS)
 
 def main():
     os.makedirs("assets", exist_ok=True)
     os.makedirs("static", exist_ok=True)
     
-    # 1. Windows Multi-DPI Icon
     sizes = [16, 20, 24, 32, 48, 64, 128, 256]
     images = []
     for s in sizes:
-        img = render_remote_keyboard_glyph(s, bg_color=None, padding_ratio=0.08)
+        img = render_centered_icon(s, bg_color=None, padding_ratio=0.06)
         images.append(img)
-        # Also save 32px png
         if s == 32:
             img.save("static/favicon.png", format="PNG")
         if s == 48:
@@ -135,16 +89,14 @@ def main():
         if s == 256:
             img.save("assets/icon_256.png", format="PNG")
             
-    # Save assets/icon.ico with all resolutions
     images[0].save(
         "assets/icon.ico",
         format="ICO",
         sizes=[(s, s) for s in sizes],
         append_images=images[1:]
     )
-    print("Created assets/icon.ico (sizes: 16 to 256)")
+    print("Created assets/icon.ico")
     
-    # Save static/favicon.ico
     fav_images = [img for img, s in zip(images, sizes) if s in [16, 32, 48]]
     fav_images[0].save(
         "static/favicon.ico",
@@ -154,15 +106,15 @@ def main():
     )
     print("Created static/favicon.ico")
     
-    # 2. Apple Touch Icon & PWA Icons (on pure OLED black)
-    ios_touch = render_remote_keyboard_glyph(180, bg_color=(0, 0, 0, 255), padding_ratio=0.18)
+    # Apple Touch & PWA (pure OLED black background)
+    ios_touch = render_centered_icon(180, bg_color=(0, 0, 0, 255), padding_ratio=0.18)
     ios_touch.save("static/apple-touch-icon.png", format="PNG")
-    print("Created static/apple-touch-icon.png (180x180)")
+    print("Created static/apple-touch-icon.png")
 
-    pwa_192 = render_remote_keyboard_glyph(192, bg_color=(0, 0, 0, 255), padding_ratio=0.18)
+    pwa_192 = render_centered_icon(192, bg_color=(0, 0, 0, 255), padding_ratio=0.18)
     pwa_192.save("static/icon-192.png", format="PNG")
     
-    pwa_512 = render_remote_keyboard_glyph(512, bg_color=(0, 0, 0, 255), padding_ratio=0.18)
+    pwa_512 = render_centered_icon(512, bg_color=(0, 0, 0, 255), padding_ratio=0.18)
     pwa_512.save("static/icon-512.png", format="PNG")
     print("Created static/icon-192.png and static/icon-512.png")
 

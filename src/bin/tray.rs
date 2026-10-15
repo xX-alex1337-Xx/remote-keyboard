@@ -19,8 +19,8 @@ use windows::Win32::Graphics::Gdi::{
     BeginPaint, BitBlt, CreateCompatibleBitmap, CreateCompatibleDC, CreateFontW, CreatePen,
     CreateSolidBrush, DeleteDC, DeleteObject, DrawTextW, EndPaint, FillRect,
     FrameRect, InvalidateRect, LineTo, MoveToEx, RoundRect, ScreenToClient, SelectObject, SetBkMode,
-    SetTextColor, BACKGROUND_MODE, DT_CENTER, DT_NOPREFIX, DT_SINGLELINE, DT_VCENTER, FW_BOLD,
-    FW_NORMAL, FW_SEMIBOLD, HDC, PAINTSTRUCT, PS_SOLID, SRCCOPY,
+    SetTextColor, BACKGROUND_MODE, DT_CENTER, DT_NOPREFIX, DT_SINGLELINE, DT_VCENTER,
+    FW_NORMAL, FW_SEMIBOLD, HDC, HFONT, PAINTSTRUCT, PS_SOLID, SRCCOPY,
 };
 use windows::Win32::UI::Input::KeyboardAndMouse::VK_ESCAPE;
 use windows::Win32::System::DataExchange::{CloseClipboard, EmptyClipboard, OpenClipboard, SetClipboardData};
@@ -63,6 +63,31 @@ const TME_LEAVE: u32 = 0x00000002;
 #[link(name = "user32")]
 extern "system" {
     fn TrackMouseEvent(lpEventTrack: *mut TRACKMOUSEEVENT) -> BOOL;
+}
+
+const CLEARTYPE_QUALITY: u32 = 5;
+
+const fn rgb(r: u8, g: u8, b: u8) -> COLORREF {
+    COLORREF((r as u32) | ((g as u32) << 8) | ((b as u32) << 16))
+}
+
+unsafe fn create_fluent_font(height: i32, weight: i32) -> HFONT {
+    CreateFontW(
+        -height,
+        0,
+        0,
+        0,
+        weight,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        CLEARTYPE_QUALITY,
+        0,
+        w!("Segoe UI Variable Text"),
+    )
 }
 
 #[derive(Default)]
@@ -565,12 +590,12 @@ unsafe fn draw_flyout(hwnd: HWND, hdc: HDC) {
     let old_bmp = SelectObject(mem_dc, mem_bmp);
 
     // 1. OLED Schwarz Hintergrund
-    let bg_brush = CreateSolidBrush(COLORREF(0x00000000));
+    let bg_brush = CreateSolidBrush(rgb(0, 0, 0));
     FillRect(mem_dc, &client_rect, bg_brush);
     let _ = DeleteObject(bg_brush);
 
     // 2. Feiner 1px Rand (#2D2D2D)
-    let border_brush = CreateSolidBrush(COLORREF(0x002D2D2D));
+    let border_brush = CreateSolidBrush(rgb(45, 45, 45));
     FrameRect(mem_dc, &client_rect, border_brush);
     let _ = DeleteObject(border_brush);
 
@@ -588,11 +613,9 @@ unsafe fn draw_flyout(hwnd: HWND, hdc: HDC) {
         let _ = DrawIconEx(mem_dc, 20, 18, ctx.h_tray_icon, 20, 20, 0, None, DI_NORMAL);
     }
 
-    let font_header = CreateFontW(
-        16, 0, 0, 0, FW_SEMIBOLD.0 as i32, 0, 0, 0, 0, 0, 0, 0, 0, w!("Segoe UI Variable Text"),
-    );
+    let font_header = create_fluent_font(13, FW_SEMIBOLD.0 as i32);
     let prev_font = SelectObject(mem_dc, font_header);
-    SetTextColor(mem_dc, COLORREF(0x00FFFFFF));
+    SetTextColor(mem_dc, rgb(255, 255, 255));
 
     let mut header_rect = RECT { left: 48, top: 16, right: 295, bottom: 40 };
     let mut header_text: Vec<u16> = "Windows Remote Steuerung".encode_utf16().collect();
@@ -600,8 +623,8 @@ unsafe fn draw_flyout(hwnd: HWND, hdc: HDC) {
 
     // Schließen-Button (✕)
     if hover_close {
-        let close_brush = CreateSolidBrush(COLORREF(0x00262626));
-        let close_pen = CreatePen(PS_SOLID, 1, COLORREF(0x00262626));
+        let close_brush = CreateSolidBrush(rgb(38, 38, 38));
+        let close_pen = CreatePen(PS_SOLID, 1, rgb(38, 38, 38));
         let old_brush = SelectObject(mem_dc, close_brush);
         let old_pen = SelectObject(mem_dc, close_pen);
         let _ = RoundRect(mem_dc, CLOSE_BTN_RECT.left, CLOSE_BTN_RECT.top, CLOSE_BTN_RECT.right, CLOSE_BTN_RECT.bottom, 6, 6);
@@ -611,13 +634,13 @@ unsafe fn draw_flyout(hwnd: HWND, hdc: HDC) {
         let _ = DeleteObject(close_pen);
     }
 
-    SetTextColor(mem_dc, if hover_close { COLORREF(0x00FFFFFF) } else { COLORREF(0x008A8A8A) });
+    SetTextColor(mem_dc, if hover_close { rgb(255, 255, 255) } else { rgb(140, 140, 140) });
     let mut close_rect = CLOSE_BTN_RECT;
     let mut close_text: Vec<u16> = "\u{2715}".encode_utf16().collect();
     DrawTextW(mem_dc, &mut close_text, &mut close_rect, DT_CENTER | DT_SINGLELINE | DT_VCENTER);
 
     // Trennlinie unter dem Header
-    let sep_pen = CreatePen(PS_SOLID, 1, COLORREF(0x001C1C1C));
+    let sep_pen = CreatePen(PS_SOLID, 1, rgb(30, 30, 30));
     let old_pen = SelectObject(mem_dc, sep_pen);
     let _ = MoveToEx(mem_dc, 20, 48, None);
     let _ = LineTo(mem_dc, 320, 48);
@@ -625,8 +648,8 @@ unsafe fn draw_flyout(hwnd: HWND, hdc: HDC) {
     let _ = DeleteObject(sep_pen);
 
     // 4. Zentraler QR-Code auf abgerundeter weißer Karte
-    let card_brush = CreateSolidBrush(COLORREF(0x00FFFFFF));
-    let card_pen = CreatePen(PS_SOLID, 1, COLORREF(0x00E4E4E4));
+    let card_brush = CreateSolidBrush(rgb(255, 255, 255));
+    let card_pen = CreatePen(PS_SOLID, 1, rgb(228, 228, 228));
     let old_brush = SelectObject(mem_dc, card_brush);
     let old_pen = SelectObject(mem_dc, card_pen);
     let _ = RoundRect(mem_dc, QR_CARD_RECT.left, QR_CARD_RECT.top, QR_CARD_RECT.right, QR_CARD_RECT.bottom, 16, 16);
@@ -645,7 +668,7 @@ unsafe fn draw_flyout(hwnd: HWND, hdc: HDC) {
         let qr_start_x = QR_CARD_RECT.left + (card_w - qr_pixel_size) / 2;
         let qr_start_y = QR_CARD_RECT.top + (card_h - qr_pixel_size) / 2;
 
-        let black_brush = CreateSolidBrush(COLORREF(0x00000000));
+        let black_brush = CreateSolidBrush(rgb(0, 0, 0));
         for y in 0..width {
             for x in 0..width {
                 if code[(x as usize, y as usize)] == qrcode::Color::Dark {
@@ -665,21 +688,17 @@ unsafe fn draw_flyout(hwnd: HWND, hdc: HDC) {
     }
 
     // 5. Texte unter dem QR-Code
-    let font_prompt = CreateFontW(
-        15, 0, 0, 0, FW_BOLD.0 as i32, 0, 0, 0, 0, 0, 0, 0, 0, w!("Segoe UI Variable Display"),
-    );
+    let font_prompt = create_fluent_font(13, FW_SEMIBOLD.0 as i32);
     SelectObject(mem_dc, font_prompt);
-    SetTextColor(mem_dc, COLORREF(0x00FFFFFF));
+    SetTextColor(mem_dc, rgb(255, 255, 255));
 
     let mut prompt_rect = RECT { left: 20, top: 302, right: 320, bottom: 322 };
     let mut prompt_text: Vec<u16> = "Mit iPad / iPhone scannen".encode_utf16().collect();
     DrawTextW(mem_dc, &mut prompt_text, &mut prompt_rect, DT_CENTER | DT_SINGLELINE);
 
-    let font_url = CreateFontW(
-        11, 0, 0, 0, FW_NORMAL.0 as i32, 0, 0, 0, 0, 0, 0, 0, 0, w!("Segoe UI Variable Text"),
-    );
+    let font_url = create_fluent_font(11, FW_NORMAL.0 as i32);
     SelectObject(mem_dc, font_url);
-    SetTextColor(mem_dc, COLORREF(0x00808080));
+    SetTextColor(mem_dc, rgb(155, 155, 155));
 
     let mut url_rect = RECT { left: 20, top: 324, right: 320, bottom: 342 };
     let mut url_text: Vec<u16> = access_url.encode_utf16().collect();
@@ -687,19 +706,19 @@ unsafe fn draw_flyout(hwnd: HWND, hdc: HDC) {
 
     // 6. Moderner "URL kopieren" Button
     let btn_bg = if recently_copied {
-        COLORREF(0x001B2E1C) // Dunkelgrün
+        rgb(22, 46, 28) // Dunkelgrün
     } else if hover_copy {
-        COLORREF(0x00262626) // Hover dunkelgrau
+        rgb(38, 38, 38) // Hover dunkelgrau
     } else {
-        COLORREF(0x001A1A1A) // Normal dunkelgrau
+        rgb(26, 26, 26) // Normal dunkelgrau
     };
 
     let btn_border = if recently_copied {
-        COLORREF(0x00337A38)
+        rgb(46, 125, 50)
     } else if hover_copy {
-        COLORREF(0x003D3D3D)
+        rgb(60, 60, 60)
     } else {
-        COLORREF(0x002C2C2C)
+        rgb(44, 44, 44)
     };
 
     let btn_brush = CreateSolidBrush(btn_bg);
@@ -712,29 +731,25 @@ unsafe fn draw_flyout(hwnd: HWND, hdc: HDC) {
     let _ = DeleteObject(btn_brush);
     let _ = DeleteObject(btn_pen);
 
-    let font_btn = CreateFontW(
-        13, 0, 0, 0, FW_SEMIBOLD.0 as i32, 0, 0, 0, 0, 0, 0, 0, 0, w!("Segoe UI Variable Text"),
-    );
+    let font_btn = create_fluent_font(12, FW_SEMIBOLD.0 as i32);
     SelectObject(mem_dc, font_btn);
 
     if recently_copied {
-        SetTextColor(mem_dc, COLORREF(0x0078D984)); // Frisches Grün
+        SetTextColor(mem_dc, rgb(117, 214, 133)); // Frisches Fluent Grün
         let mut btn_rect = COPY_BTN_RECT;
         let mut btn_text: Vec<u16> = "\u{2713} In Zwischenablage kopiert!".encode_utf16().collect();
         DrawTextW(mem_dc, &mut btn_text, &mut btn_rect, DT_CENTER | DT_SINGLELINE | DT_VCENTER);
     } else {
-        SetTextColor(mem_dc, COLORREF(0x00FFFFFF));
+        SetTextColor(mem_dc, rgb(255, 255, 255));
         let mut btn_rect = COPY_BTN_RECT;
         let mut btn_text: Vec<u16> = "Verbindungs-URL kopieren".encode_utf16().collect();
         DrawTextW(mem_dc, &mut btn_text, &mut btn_rect, DT_CENTER | DT_SINGLELINE | DT_VCENTER);
     }
 
     // 7. Footer: "Neuen Token generieren" Link
-    let font_link = CreateFontW(
-        11, 0, 0, 0, FW_NORMAL.0 as i32, 0, 0, 0, 0, 0, 0, 0, 0, w!("Segoe UI Variable Text"),
-    );
+    let font_link = create_fluent_font(11, FW_NORMAL.0 as i32);
     SelectObject(mem_dc, font_link);
-    SetTextColor(mem_dc, if hover_token { COLORREF(0x009AE0FF) } else { COLORREF(0x0052C3FF) });
+    SetTextColor(mem_dc, if hover_token { rgb(128, 216, 255) } else { rgb(76, 194, 255) });
 
     let mut token_rect = TOKEN_LINK_RECT;
     let mut token_text: Vec<u16> = "Neuen Sicherheitstoken generieren".encode_utf16().collect();
