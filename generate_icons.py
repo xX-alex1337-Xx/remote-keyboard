@@ -15,78 +15,73 @@ AUTHENTIC_24X17_MASK_B64 = (
 )
 
 
-def get_fluent_arc_raw():
-    # Extract authentic Fluent WiFi arc from SegoeIcons.ttf glyph \uEC3E
-    font_wifi = ImageFont.truetype("C:/Windows/Fonts/SegoeIcons.ttf", 300)
-    temp_wifi = Image.new("RGBA", (400, 400), (0, 0, 0, 0))
-    ImageDraw.Draw(temp_wifi).text((50, 50), "\uEC3E", font=font_wifi, fill=(255, 255, 255, 255))
-    wifi_full = temp_wifi.crop(temp_wifi.getbbox())
-    arc = wifi_full.crop((0, 0, wifi_full.width, int(wifi_full.height * 0.32)))
-    return arc.crop(arc.getbbox())
+def draw_smooth_arc(draw, center, radius, start_deg, end_deg, stroke_width, fill_color):
+    import math
+    cx, cy = center
+    r_outer = radius + stroke_width / 2.0
+    draw.arc([cx - r_outer, cy - r_outer, cx + r_outer, cy + r_outer],
+             start=start_deg, end=end_deg, fill=fill_color, width=int(stroke_width))
 
-def get_exact_24x24_with_arc():
-    data = base64.b64decode(AUTHENTIC_24X17_MASK_B64)
-    orig_arr = np.frombuffer(data, dtype=np.uint8).reshape((17, 24))
+    # Rounded end caps matching stroke radius
+    rad_start = math.radians(start_deg)
+    x1 = cx + radius * math.cos(rad_start)
+    y1 = cy + radius * math.sin(rad_start)
+    cap_r = stroke_width / 2.0
+    draw.ellipse([x1 - cap_r, y1 - cap_r, x1 + cap_r, y1 + cap_r], fill=fill_color)
 
-    icon_24 = Image.new('RGBA', (24, 24), (0, 0, 0, 0))
-    # Keyboard placed at y=4, keeping 100% of authentic pixels untouched
-    for y in range(17):
-        for x in range(24):
-            a = int(orig_arr[y, x])
-            if a > 0:
-                icon_24.putpixel((x, y + 4), (255, 255, 255, a))
+    rad_end = math.radians(end_deg)
+    x2 = cx + radius * math.cos(rad_end)
+    y2 = cy + radius * math.sin(rad_end)
+    draw.ellipse([x2 - cap_r, y2 - cap_r, x2 + cap_r, y2 + cap_r], fill=fill_color)
 
-    # Fluent arc: width 12, height 3, placed at y=0, x=6 (1px clean black gap at y=3)
-    arc_raw = get_fluent_arc_raw()
-    arc_scaled = arc_raw.resize((12, 3), Image.Resampling.LANCZOS)
-    icon_24.paste(arc_scaled, (6, 0), arc_scaled)
+def get_highres_keyboard_glyph():
+    font = ImageFont.truetype("C:/Windows/Fonts/SegoeIcons.ttf", 600)
+    scratch = Image.new("RGBA", (800, 800), (0, 0, 0, 0))
+    d = ImageDraw.Draw(scratch)
+    d.text((50, 50), "\uE765", font=font, fill=(255, 255, 255, 255))
+    return scratch.crop(scratch.getbbox())
 
-    return icon_24
+KB_GLYPH_RAW = None
 
 def render_fluent_remote_keyboard_icon(size, bg_color=None):
-    if size == 24:
-        icon = get_exact_24x24_with_arc()
-        if bg_color:
-            bg = Image.new('RGBA', (24, 24), bg_color)
-            bg.paste(icon, (0, 0), icon)
-            return bg
-        return icon
+    global KB_GLYPH_RAW
+    if KB_GLYPH_RAW is None:
+        KB_GLYPH_RAW = get_highres_keyboard_glyph()
 
-    # Vector rendering from SegoeIcons.ttf for crisp multi-resolution display
-    scale = 4
-    canvas_size = size * scale
+    # Master vector canvas at 1200x1200 for subpixel anti-aliasing
+    master_size = 1200
+    img = Image.new("RGBA", (master_size, master_size), (0, 0, 0, 0))
 
-    font_kb = ImageFont.truetype("C:/Windows/Fonts/SegoeIcons.ttf", int(canvas_size * 0.82))
-    temp_kb = Image.new("RGBA", (canvas_size * 2, canvas_size * 2), (0, 0, 0, 0))
-    ImageDraw.Draw(temp_kb).text((50, 50), "\uE765", font=font_kb, fill=(255, 255, 255, 255))
-    kb_raw = temp_kb.crop(temp_kb.getbbox())
+    kb_w = int(master_size * 0.82)
+    kb_h = int(KB_GLYPH_RAW.height * (kb_w / KB_GLYPH_RAW.width))
+    kb_scaled = KB_GLYPH_RAW.resize((kb_w, kb_h), Image.Resampling.LANCZOS)
 
-    arc_raw = get_fluent_arc_raw()
+    # Stroke thickness = EXACTLY same thickness as keyboard outer border (ratio = 37 / 600)
+    stroke = int(kb_w * (37.0 / 600.0))
 
-    target_kb_w = int(canvas_size * 0.94)
-    target_kb_h = int(kb_raw.height * (target_kb_w / kb_raw.width))
-    kb_scaled = kb_raw.resize((target_kb_w, target_kb_h), Image.Resampling.LANCZOS)
+    # Keyboard positioned towards bottom
+    kb_x = (master_size - kb_w) // 2
+    kb_y = master_size - kb_h - int(master_size * 0.08)
+    img.paste(kb_scaled, (kb_x, kb_y), kb_scaled)
 
-    # Arc width = 50% of keyboard width
-    target_arc_w = int(target_kb_w * 0.50)
-    target_arc_h = int(arc_raw.height * (target_arc_w / arc_raw.width))
-    arc_scaled = arc_raw.resize((target_arc_w, target_arc_h), Image.Resampling.LANCZOS)
+    # Arc placed further away with clear airy gap:
+    # Arc top at 8% of master_size (~96px), radius 44% (~528px)
+    cx = master_size // 2
+    r = int(master_size * 0.44)
+    cy = int(master_size * 0.08) + r
 
-    gap = max(scale, int(canvas_size * 0.045))
-    total_h = target_arc_h + gap + target_kb_h
-    start_y = (canvas_size - total_h) // 2
+    d_img = ImageDraw.Draw(img)
+    # Shallow 50° North wave (245° to 295°) with rounded caps matching stroke radius
+    draw_smooth_arc(d_img, (cx, cy), r, 245, 295, stroke, (255, 255, 255, 255))
 
-    final_img = Image.new("RGBA", (canvas_size, canvas_size), bg_color if bg_color else (0, 0, 0, 0))
+    if bg_color:
+        final_img = Image.new("RGBA", (size, size), bg_color)
+    else:
+        final_img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
 
-    # Paste arc centered
-    arc_x = (canvas_size - target_arc_w) // 2
-    final_img.paste(arc_scaled, (arc_x, start_y), arc_scaled)
-
-    # Paste keyboard centered
-    kb_x = (canvas_size - target_kb_w) // 2
-    final_img.paste(kb_scaled, (kb_x, start_y + target_arc_h + gap), kb_scaled)
-
-    return final_img.resize((size, size), Image.Resampling.LANCZOS)
+    downsampled = img.resize((size, size), Image.Resampling.LANCZOS)
+    final_img.paste(downsampled, (0, 0), downsampled)
+    return final_img
 
 def main():
     os.makedirs("assets", exist_ok=True)
