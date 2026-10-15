@@ -43,7 +43,40 @@ def get_highres_keyboard_glyph():
 
 KB_GLYPH_RAW = None
 
+def get_exact_24x24_with_arc():
+    data = base64.b64decode(AUTHENTIC_24X17_MASK_B64)
+    orig_arr = np.frombuffer(data, dtype=np.uint8).reshape((17, 24))
+
+    icon_24 = Image.new("RGBA", (24, 24), (0, 0, 0, 0))
+    # Place authentic 24x17 keyboard at y=5..21 (unaltered, 100% sharp pixel matrix)
+    for y in range(17):
+        for x in range(24):
+            a = int(orig_arr[y, x])
+            if a > 0:
+                icon_24.putpixel((x, y + 5), (255, 255, 255, a))
+
+    # Arc drawn at 8x scale with exact 2px stroke, rounded caps, and 2px clean gap (y=3, 4)
+    arc_canvas = Image.new("RGBA", (24 * 8, 5 * 8), (0, 0, 0, 0))
+    d_arc = ImageDraw.Draw(arc_canvas)
+    cx8 = (24 * 8) / 2
+    r8 = 48
+    cy8 = 8 + r8
+    stroke8 = 16  # 2px in 1x scale
+    draw_smooth_arc(d_arc, (cx8, cy8), r8, 245, 295, stroke8, (255, 255, 255, 255))
+
+    arc_24 = arc_canvas.resize((24, 5), Image.Resampling.LANCZOS)
+    icon_24.paste(arc_24, (0, 0), arc_24)
+    return icon_24
+
 def render_fluent_remote_keyboard_icon(size, bg_color=None):
+    if size == 24:
+        icon = get_exact_24x24_with_arc()
+        if bg_color:
+            bg = Image.new("RGBA", (24, 24), bg_color)
+            bg.paste(icon, (0, 0), icon)
+            return bg
+        return icon
+
     global KB_GLYPH_RAW
     if KB_GLYPH_RAW is None:
         KB_GLYPH_RAW = get_highres_keyboard_glyph()
@@ -52,7 +85,7 @@ def render_fluent_remote_keyboard_icon(size, bg_color=None):
     master_size = 1200
     img = Image.new("RGBA", (master_size, master_size), (0, 0, 0, 0))
 
-    kb_w = int(master_size * 0.82)
+    kb_w = int(master_size * 0.88)
     kb_h = int(KB_GLYPH_RAW.height * (kb_w / KB_GLYPH_RAW.width))
     kb_scaled = KB_GLYPH_RAW.resize((kb_w, kb_h), Image.Resampling.LANCZOS)
 
@@ -61,14 +94,14 @@ def render_fluent_remote_keyboard_icon(size, bg_color=None):
 
     # Keyboard positioned towards bottom
     kb_x = (master_size - kb_w) // 2
-    kb_y = master_size - kb_h - int(master_size * 0.08)
+    kb_y = master_size - kb_h - int(master_size * 0.06)
     img.paste(kb_scaled, (kb_x, kb_y), kb_scaled)
 
     # Arc placed further away with clear airy gap:
-    # Arc top at 8% of master_size (~96px), radius 44% (~528px)
+    # Arc top at 6% of master_size (~72px), radius 44% (~528px)
     cx = master_size // 2
     r = int(master_size * 0.44)
-    cy = int(master_size * 0.08) + r
+    cy = int(master_size * 0.06) + r
 
     d_img = ImageDraw.Draw(img)
     # Shallow 50° North wave (245° to 295°) with rounded caps matching stroke radius
