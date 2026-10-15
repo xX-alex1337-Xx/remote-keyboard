@@ -5,58 +5,43 @@ def render_centered_single_arc_icon(size, bg_color=None):
     scale = 4
     canvas_size = size * scale
     
+    # 1. Render genuine Windows Touch Keyboard glyph (\uE765) from segmdl2.ttf
+    # with sharp rectangular keys and spacebar
+    font_size = int(canvas_size * 0.85)
+    font = ImageFont.truetype("C:/Windows/Fonts/segmdl2.ttf", font_size)
+    
     scratch_size = canvas_size * 2
-    scratch = Image.new("RGBA", (scratch_size, scratch_size), (0, 0, 0, 0))
-    white = (255, 255, 255, 255)
+    temp = Image.new("RGBA", (scratch_size, scratch_size), (0, 0, 0, 0))
+    ImageDraw.Draw(temp).text((50, 50), "\uE765", font=font, fill=(255, 255, 255, 255))
+    bbox = temp.getbbox()
+    kb = temp.crop(bbox)
     
-    # 1. Render original Windows SegoeIcons TouchKeyboard glyph (\uE765)
-    # Sized so the keyboard fills the width naturally (~88% of canvas)
-    font_size = int(canvas_size * 0.90)
-    font = ImageFont.truetype("C:/Windows/Fonts/SegoeIcons.ttf", font_size)
-    
-    kb_temp = Image.new("RGBA", (scratch_size, scratch_size), (0, 0, 0, 0))
-    ImageDraw.Draw(kb_temp).text((100, 100), "\uE765", font=font, fill=white)
-    bbox = kb_temp.getbbox()
-    
-    kb_w = bbox[2] - bbox[0]
-    kb_h = bbox[3] - bbox[1]
-    kb_cropped = kb_temp.crop(bbox)
-    
-    # Target keyboard width in final canvas = 88%
-    target_kb_w = int(canvas_size * 0.88)
-    target_kb_h = int(kb_h * (target_kb_w / kb_w))
-    kb_scaled = kb_cropped.resize((target_kb_w, target_kb_h), Image.Resampling.LANCZOS)
-    
-    # Place keyboard centered horizontally, positioned at bottom leaving space for arc on top
-    # Bottom margin ~ 5% of canvas
-    kb_x = (canvas_size - target_kb_w) // 2
-    kb_y = canvas_size - int(canvas_size * 0.05) - target_kb_h
+    # Keyboard width = 84% of canvas
+    target_kb_w = int(canvas_size * 0.84)
+    target_kb_h = int(kb.height * (target_kb_w / kb.width))
+    kb_scaled = kb.resize((target_kb_w, target_kb_h), Image.Resampling.LANCZOS)
     
     if bg_color:
         final_img = Image.new("RGBA", (canvas_size, canvas_size), bg_color)
     else:
         final_img = Image.new("RGBA", (canvas_size, canvas_size), (0, 0, 0, 0))
         
+    # Keyboard positioned centered horizontally, resting slightly toward bottom
+    kb_x = (canvas_size - target_kb_w) // 2
+    kb_y = canvas_size - target_kb_h - int(canvas_size * 0.08)
     final_img.paste(kb_scaled, (kb_x, kb_y), kb_scaled)
+    
     final_draw = ImageDraw.Draw(final_img)
-    
-    # 2. Single signal arc centered above keyboard, radiating North
     cx = canvas_size // 2
-    stroke = max(2 * scale, int(font_size * 0.052))
+    stroke = max(2 * scale, int(canvas_size * 0.052))
     
-    # Radius so the top of the arc reaches near the top of the canvas (~8% margin)
-    top_margin = int(canvas_size * 0.07)
-    arc_top = top_margin
-    # Arc height:
-    arc_height = kb_y - arc_top
-    
-    # Origin of radius: just below top border of keyboard
-    origin_y = kb_y + int(target_kb_h * 0.15)
-    r = origin_y - arc_top
-    
-    # Radiate towards North: start 215 deg, end 325 deg (or 210 to 330)
-    final_draw.arc([cx - r, origin_y - r, cx + r, origin_y + r],
-                   start=215, end=325, fill=white, width=stroke)
+    # 2. Single shallow North signal wave, floating high with clear separation
+    # Arc angle: 244 to 296 deg (52 degrees) - gentle curve that radiates signal,
+    # completely detached so it never resembles a handle or suitcase!
+    r = int(canvas_size * 0.35)
+    cy = int(canvas_size * 0.07) + r
+    final_draw.arc([cx - r, cy - r, cx + r, cy + r],
+                   start=244, end=296, fill=(255, 255, 255, 255), width=stroke)
                    
     return final_img.resize((size, size), Image.Resampling.LANCZOS)
 

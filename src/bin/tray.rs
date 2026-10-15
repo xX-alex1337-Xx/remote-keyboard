@@ -686,9 +686,10 @@ unsafe fn draw_flyout(hwnd: HWND, hdc: HDC) {
     };
 
     // 3. Header: Icon + Titel + Schließen-Kreuz
-    let icon_size = s(22);
+    let icon_size = GetSystemMetrics(SM_CXSMICON);
+    let icon_y = s(16) + (s(24) - icon_size).max(0) / 2;
     if let Some(ctx) = APP_CTX.get() {
-        let _ = DrawIconEx(mem_dc, s(18), s(16), ctx.h_tray_icon, icon_size, icon_size, 0, None, DI_NORMAL);
+        let _ = DrawIconEx(mem_dc, s(18), icon_y, ctx.h_tray_icon, icon_size, icon_size, 0, None, DI_NORMAL);
     }
 
     let font_header = create_fluent_font(10, FW_SEMIBOLD.0 as i32, dpi);
