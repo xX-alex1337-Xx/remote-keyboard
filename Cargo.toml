@@ -18,10 +18,9 @@ name = "remote-keyboard-tray"
 path = "src/bin/tray.rs"
 
 [dependencies]
-tokio = { version = "1.40", features = ["full"] }
+tokio = { version = "1.40", features = ["rt", "net", "sync", "macros", "time", "signal"] }
 axum = { version = "0.7", features = ["ws"] }
 futures-util = "0.3"
-tower-http = { version = "0.6", features = ["cors", "trace"] }
 rust-embed = { version = "8.5", features = ["interpolate-folder-path"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
@@ -50,4 +49,5 @@ features = [
 opt-level = 3
 lto = true
 codegen-units = 1
+panic = "abort"
 strip = true

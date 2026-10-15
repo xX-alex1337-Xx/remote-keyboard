@@ -70,7 +70,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         let log_file = dir.join("server.log");
         let _ = std::fs::write(&log_file, format!("Starte Background Server auf Port {}...\n", port));
 
-        match tokio::runtime::Builder::new_multi_thread().enable_all().build() {
+        match tokio::runtime::Builder::new_current_thread().enable_all().build() {
             Ok(rt) => {
                 rt.block_on(async move {
                     let app_state = AppState { auth: auth_clone };

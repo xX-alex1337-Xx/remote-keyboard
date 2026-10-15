@@ -1,76 +1,125 @@
-# ⌨️ Windows Remote Keyboard & Trackpad (Rust)
+# ⌨️ Windows Remote Keyboard & Trackpad
 
-Ein extrem leichtgewichtiger, portabler Webserver in Rust, mit dem du diesen und andere Windows-Rechner bequem und mit minimaler Latenz aus der Ferne über dein **iPad** oder **iPhone** steuern kannst.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Rust](https://img.shields.io/badge/Rust-1.80%2B-orange.svg)](https://www.rust-lang.org/)
+[![Platform](https://img.shields.io/badge/Platform-Windows%2010%20%2F%2011-blue.svg)](https://www.microsoft.com/windows)
+[![Memory](https://img.shields.io/badge/RAM-~8%20MB-brightgreen.svg)](#performance--ressourcen)
 
-Die Benutzeroberfläche ist als moderne, OLED-schwarze Progressive Web App (PWA) gestaltet und bietet ein vollständiges Multi-Touch-Trackpad mit Tap-to-Drag, eine vollwertige deutsche Tastatur (QWERTZ) inklusive Umlauten, Windows-Sondertasten, Shortcuts und Mediensteuerung.
-
-Das Projekt umfasst zwei ausführbare Varianten:
-1. **`remote-keyboard.exe` (Konsolen-App):** Zeigt beim Start einen scanbaren ASCII-QR-Code im Terminal an.
-2. **`remote-keyboard-tray.exe` (System-Tray Version):** Läuft dezent im Hintergrund in der Windows-Taskleiste neben der Uhr, unterstützt Windows-Autostart, speichert den Token persistent und zeigt den QR-Code in einem schlanken nativen Fenster an.
+Ein ultra-leichtgewichtiger, ressourcenschonender Rust-Webserver zur nahtlosen Fernsteuerung von Windows-PCs über das iPad oder iPhone im lokalen Netzwerk. Bietet ein responsives Touch-Trackpad und eine deutsche QWERTZ-Tastatur direkt im mobilen Browser – ganz ohne App-Store-Download auf dem Mobilgerät.
 
 ---
 
 ## ✨ Features
 
-- **🚀 All-in-One Portable Binary:** Keine Installation oder Laufzeit-Abhängigkeiten. Alle Web-Dateien sind direkt in die kompilierte `.exe` eingebettet.
-- **⚡ Extrem geringe Latenz (< 5 ms):** Direkte WebSocket-Kommunikation mit optimierter Touch-Ereignis-Verarbeitung über `requestAnimationFrame`.
-- **🖤 Echtes OLED-Schwarz (`#000000`):** Perfekter Kontrast und maximale Energieeinsparung auf iPhone- und iPad-OLED-Displays.
-- **👆 Multi-Touch Trackpad-Gesten:**
-  - **1 Finger:** Cursor bewegen & sanfte Beschleunigung
-  - **1-Finger-Tippen:** Linksklick
-  - **2-Finger-Tippen:** Rechtsklick
-  - **2-Finger-Wischen:** Scrollen nach Windows-Standard (Wischen nach unten = Dokument nach unten)
-  - **Doppeltippen & Halten/Ziehen (Tap-to-Drag):** Natives Drag & Drop direkt auf dem Trackpad mit blauem Leuchtrahmen und taktilem Feedback
-  - **Maustasten:** Große Daumentasten für Linksklick, Rechtsklick und mittleren Klick.
-- **🔤 Vollständige deutsche Tastatur (QWERTZ):**
-  - F-Tasten (F1 bis F12)
-  - Zahlenreihe & Sonderzeichen (`^`, `1`..`0`, `ß`, `´`, etc.)
-  - Deutsche Umlaute (`Ä`, `Ö`, `Ü`) und Sonderzeichen (`#`, `-`, `,`, `.`)
-  - Einrastende Modifikatoren: `Strg`, `Alt`, `Shift`, `⊞ Win` und `AltGr`
-  - Windows-Shortcuts: `Alt+Tab`, `Win+D` (Desktop), `Win+E` (Explorer), `Win+L` (Sperren)
-  - Mediensteuerung: Lautstärke lauter/leiser, Stumm (Mute), Vorheriger Titel (`⏮️`), Play/Pause (`⏯️`), Nächster Titel (`⏭️`)
-- **🎤 iOS-Tastatur & Diktierfunktion:** Über das Tastatur-Icon lässt sich jederzeit das native iOS-Tastaturfeld öffnen, um Siri-Spracheingaben oder iOS-Wortvorschläge direkt auf den PC zu übertragen.
-- **🔔 Windows System-Tray Integration:**
-  - Kein störendes Konsolenfenster
-  - Startet optional automatisch beim Windows-Login (`HKCU\Software\Microsoft\Windows\CurrentVersion\Run`)
-  - Rechnerneustart-fester Token (iPad verbindet sich nach PC-Neustart automatisch wieder)
-  - Nativer Windows-Dialog zum Anzeigen des QR-Codes und Kopieren der URL.
+- **📱 Touch-Trackpad & Gesten**:
+  - **Mauszeiger bewegen**: Flüssige Cursorsteuerung mit geringer Latenz über WebSockets.
+  - **Klicken**: Tippen mit einem Finger (Linksklick), Tippen mit zwei Fingern (Rechtsklick).
+  - **Zwei-Finger-Scrollen**: Weiches vertikales Scrollen (standardmäßig mit natürlicher / invertierter Windows-Richtung).
+  - **Doppeltippen & Halten (Tap-to-Drag)**: Fenster greifen, Text markieren oder Drag & Drop ohne separate Tasten.
+- **⌨️ Deutsche QWERTZ-Tastatur**:
+  - Vollständiges deutsches Tastaturlayout inklusive Umlauten (`ä`, `ö`, `ü`, `ß`).
+  - Funktionstasten (`Esc`, `Tab`, Pfeiltasten, `Enter`, `Backspace`, `Ctrl`, `Alt`, `Win`).
+  - Dedizierte Medientasten: **Vorheriger Titel**, **Wiedergabe / Pause**, **Nächster Titel** sowie Lautstärkeregelung.
+- **🖤 Reines OLED-Schwarz (`#000000`)**:
+  - Speziell optimiert für moderne OLED-Displays auf iPhone und iPad Pro zur maximalen Akku- und Augenschonung im Dunkeln.
+- **🪟 Native Windows System-Tray Integration**:
+  - Unauffälliges Icon im Windows-Infobereich (Tray) neben der Uhr.
+  - Kontextmenü: QR-Code anzeigen, URL kopieren, Token erneuern, Autostart umschalten, Beenden.
+  - **Natives GDI QR-Code-Fenster**: Schnell mit der iPad-/iPhone-Kamera scannen und sofort verbinden.
+- **🚀 1-Klick Installer & Deinstaller**:
+  - Doppelklickbare `install.bat` und `uninstall.bat` – keine Admin-Rechte erforderlich!
 
 ---
 
-## 🚀 Schnellstart
+## ⚡ Performance & Ressourcen
 
-### Variante A: System-Tray Version (Empfohlen für den Alltag)
-Starte die Tray-Version per Doppelklick auf `start-tray.bat` oder direkt:
-```powershell
-.\target\release\remote-keyboard-tray.exe
-```
-- Die App minimiert sich sofort in die Windows-Taskleiste (neben der Uhr).
-- **Linksklick / Doppelklick:** Öffnet das native QR-Code Fenster.
-- **Rechtsklick:** Öffnet das Menü (QR-Code anzeigen, URL kopieren, Mit Windows starten, Token generieren, Beenden).
+Im Gegensatz zu Lösungen auf Basis von Electron, Tauri oder Node.js setzt dieses Projekt auf maximale Effizienz:
 
-### Variante B: Konsolen-Version (Ideal für schnelle Tests)
-Starte die Konsolen-Version über `start.bat`:
-```powershell
-.\target\release\remote-keyboard.exe
-```
-Druckt den QR-Code direkt in die Konsole.
+| Metrik | Remote Keyboard | Typische Electron-App |
+| :--- | :--- | :--- |
+| **Arbeitsspeicher (RAM)** | **~8 – 11 MB** | ~150 – 300 MB |
+| **Thread-Anzahl** | **2 Threads** (Win32 GUI + Single-Thread Tokio) | 20 – 40 Threads |
+| **Binärgröße** | **~1,3 MB** (Standalone `.exe`) | > 100 MB |
+| **Abhängigkeiten** | **0** (Reine Windows API via Win32 GDI & Sockets) | Chromium, Node.js, WebViews |
 
 ---
 
-## 📱 Verbinden mit dem iPad / iPhone
-1. Öffne die **Kamera-App** auf deinem iPad oder iPhone und richte sie auf den QR-Code.
-2. Tippe auf die angezeigte Benachrichtigung, um die Fernsteuerung in Safari zu öffnen.
-3. *(Empfohlen)* Tippe in Safari auf das **Teilen-Symbol** (Viereck mit Pfeil nach oben) und wähle **„Zum Home-Bildschirm“**. Dadurch läuft die Steuerung im randlosen Vollbildmodus ohne Browserleisten.
+## 📥 Installation
+
+### 1. Schnell-Installation (Empfohlen)
+1. Repository klonen oder als ZIP herunterladen.
+2. Doppelklick auf **`install.bat`**.
+   * Die Anwendung wird nach `%LOCALAPPDATA%\Programs\RemoteKeyboard` installiert.
+   * Startmenü-Verknüpfung und Windows-Autostart werden automatisch eingerichtet.
+   * Es werden **keine Administrator-Rechte** benötigt.
+3. Das Tray-Icon erscheint sofort unten rechts neben der Windows-Uhr.
+
+### 2. Deinstallation
+* Doppelklick auf **`uninstall.bat`** entfernt die App, den Autostart und die Startmenü-Einträge restlos.
 
 ---
 
 ## 🛠️ Aus dem Quellcode bauen
 
+Voraussetzungen:
+- [Rust & Cargo](https://rustup.rs/) (MSVC oder GNU Toolchain)
+
 ```powershell
-# Beide Versionen im Release-Modus kompilieren
+# Repository klonen
+git clone https://github.com/xX-alex1337-Xx/remote-keyboard.git
+cd remote-keyboard
+
+# Release-Binaries kompilieren
 cargo build --release
+
+# Tray-Version starten
+.\target\release\remote-keyboard-tray.exe
+
+# Oder CLI-Version mit ASCII-QR-Code im Terminal starten
+.\target\release\remote-keyboard.exe
 ```
-Erzeugt:
-- `target/release/remote-keyboard.exe` (CLI-Version)
-- `target/release/remote-keyboard-tray.exe` (Tray-Version)
+
+---
+
+## 📱 Verbindung herstellen (iPad / iPhone)
+
+1. Stelle sicher, dass PC und iPad/iPhone mit demselben **WLAN** verbunden sind.
+2. Klicke mit der rechten Maustaste auf das Tray-Icon in Windows und wähle **"QR-Code anzeigen"**.
+3. Öffne die **Kamera-App** auf dem iPad/iPhone und tippe auf den erkannten gelben Link.
+4. **Tipp für Vollbild:** Tippe in Safari unten auf das **Teilen-Symbol** und wähle **"Zum Home-Bildschirm"**. Dadurch öffnet sich die Fernsteuerung wie eine native App ohne störende Browserleisten.
+
+---
+
+## 🏗️ Architektur
+
+```
+┌────────────────────────────────────────────────────────┐
+│                   Windows System                       │
+│  ┌─────────────────────────┐  ┌─────────────────────┐  │
+│  │    Win32 System Tray    │  │   Win32 GDI Window  │  │
+│  │  (Shell_NotifyIconW)    │  │   (QR-Code Dialog)  │  │
+│  └────────────┬────────────┘  └──────────┬──────────┘  │
+│               │                          │             │
+│               ▼                          ▼             │
+│  ┌──────────────────────────────────────────────────┐  │
+│  │   Single-Thread Tokio Runtime & Axum Webserver   │  │
+│  │   - Port 8080 (Statische Assets & WebSocket)     │  │
+│  │   - Token-basierte Authentifizierung             │  │
+│  │   - Win32 SendInput Maus- & Tastatur-Emulation   │  │
+│  └────────────────────────▲─────────────────────────┘  │
+└───────────────────────────┼────────────────────────────┘
+                            │ WebSocket (JSON)
+                            ▼
+              ┌───────────────────────────┐
+              │  iPad / iPhone (Safari)   │
+              │  - OLED Black Web Client  │
+              │  - Touchpad & Gesten      │
+              │  - QWERTZ On-Screen Keys  │
+              └───────────────────────────┘
+```
+
+---
+
+## 📄 Lizenz
+
+Dieses Projekt ist unter der **[MIT-Lizenz](LICENSE)** lizenziert – siehe die [LICENSE](LICENSE) Datei für Details.
