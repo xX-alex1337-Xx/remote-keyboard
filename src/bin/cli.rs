@@ -1,11 +1,10 @@
-mod auth;
-mod input;
-mod server;
-
-use auth::AuthState;
 use local_ip_address::local_ip;
 use qrcode::{render::unicode::Dense1x2, QrCode};
-use server::{create_router, AppState};
+use remote_keyboard_lib::{
+    auth::AuthState,
+    config::AppConfig,
+    server::{create_router, AppState},
+};
 use std::net::SocketAddr;
 use tracing::info;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -18,18 +17,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with(tracing_subscriber::fmt::layer())
         .init();
 
-    // Port festlegen (Standard: 8080 oder über Umgebungsvariable)
+    // Port und Konfiguration laden
+    let config = AppConfig::load_or_create();
     let port: u16 = std::env::var("PORT")
         .ok()
         .and_then(|p| p.parse().ok())
-        .unwrap_or(8080);
+        .unwrap_or(config.port);
 
     // Lokale IP-Adresse im Netzwerk ermitteln
     let ip = local_ip().unwrap_or_else(|_| "127.0.0.1".parse().unwrap());
 
-    // Authentifizierungs-Token generieren
-    let auth = AuthState::new();
-    let token = auth.token.clone();
+    // AuthState mit dem Token initialisieren
+    let auth = AuthState::with_token(config.token.clone());
+    let token = auth.get_token();
 
     // Vollständige Verbindungs-URL für iPad / iPhone
     let access_url = format!("http://{}:{}/?token={}", ip, port, token);

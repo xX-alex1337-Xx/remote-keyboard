@@ -5,6 +5,18 @@ edition = "2021"
 authors = ["alexa"]
 description = "Leichtgewichtiger Rust-Webserver zur Fernsteuerung von Windows PCs via iPad/iPhone"
 
+[lib]
+name = "remote_keyboard_lib"
+path = "src/lib.rs"
+
+[[bin]]
+name = "remote-keyboard"
+path = "src/bin/cli.rs"
+
+[[bin]]
+name = "remote-keyboard-tray"
+path = "src/bin/tray.rs"
+
 [dependencies]
 tokio = { version = "1.40", features = ["full"] }
 axum = { version = "0.7", features = ["ws"] }
@@ -26,6 +38,12 @@ features = [
     "Win32_Foundation",
     "Win32_UI_Input_KeyboardAndMouse",
     "Win32_UI_WindowsAndMessaging",
+    "Win32_UI_Shell",
+    "Win32_Graphics_Gdi",
+    "Win32_System_DataExchange",
+    "Win32_System_LibraryLoader",
+    "Win32_System_Memory",
+    "Win32_System_Registry",
 ]
 
 [profile.release]

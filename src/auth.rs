@@ -1,9 +1,9 @@
 use rand::{distributions::Alphanumeric, Rng};
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 
 #[derive(Clone)]
 pub struct AuthState {
-    pub token: Arc<String>,
+    pub token: Arc<RwLock<String>>,
 }
 
 impl AuthState {
@@ -14,12 +14,25 @@ impl AuthState {
             .map(char::from)
             .collect();
 
+        Self::with_token(token)
+    }
+
+    pub fn with_token(token: String) -> Self {
         Self {
-            token: Arc::new(token),
+            token: Arc::new(RwLock::new(token)),
         }
     }
 
+    pub fn get_token(&self) -> String {
+        self.token.read().unwrap().clone()
+    }
+
+    pub fn set_token(&self, new_token: String) {
+        let mut t = self.token.write().unwrap();
+        *t = new_token;
+    }
+
     pub fn is_valid(&self, token: &str) -> bool {
-        self.token.as_str() == token
+        self.token.read().unwrap().as_str() == token
     }
 }
