@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1f2430" />
+      <stop offset="100%" stop-color="#0d1117" />
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#2563eb" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="110" fill="url(#bgGrad)" />
+  <rect x="32" y="32" width="448" height="448" rx="88" fill="none" stroke="#30363d" stroke-width="4" />
+  
+  <!-- Keyboard outline -->
+  <rect x="76" y="86" width="360" height="150" rx="20" fill="#161b22" stroke="#38bdf8" stroke-width="6" opacity="0.9" />
+  <!-- Keys -->
+  <rect x="100" y="110" width="36" height="30" rx="6" fill="#30363d" />
+  <rect x="146" y="110" width="36" height="30" rx="6" fill="#30363d" />
+  <rect x="192" y="110" width="36" height="30" rx="6" fill="#30363d" />
+  <rect x="238" y="110" width="36" height="30" rx="6" fill="#30363d" />
+  <rect x="284" y="110" width="36" height="30" rx="6" fill="#30363d" />
+  <rect x="330" y="110" width="36" height="30" rx="6" fill="#30363d" />
+  <rect x="376" y="110" width="36" height="30" rx="6" fill="#38bdf8" />
+  
+  <rect x="100" y="150" width="46" height="30" rx="6" fill="#30363d" />
+  <rect x="156" y="150" width="36" height="30" rx="6" fill="#30363d" />
+  <rect x="202" y="150" width="36" height="30" rx="6" fill="#30363d" />
+  <rect x="248" y="150" width="36" height="30" rx="6" fill="#30363d" />
+  <rect x="294" y="150" width="36" height="30" rx="6" fill="#30363d" />
+  <rect x="340" y="150" width="72" height="30" rx="6" fill="#30363d" />
+  
+  <rect x="100" y="190" width="60" height="30" rx="6" fill="#38bdf8" opacity="0.8" />
+  <rect x="170" y="190" width="172" height="30" rx="6" fill="#484f58" />
+  <rect x="352" y="190" width="60" height="30" rx="6" fill="#38bdf8" opacity="0.8" />
+
+  <!-- Trackpad outline -->
+  <rect x="76" y="260" width="360" height="170" rx="20" fill="#161b22" stroke="#484f58" stroke-width="4" />
+  <!-- Trackpad cursor indicator -->
+  <circle cx="256" cy="330" r="14" fill="url(#accentGrad)" />
+  <circle cx="256" cy="330" r="28" fill="none" stroke="#38bdf8" stroke-width="3" opacity="0.5" />
+  
+  <!-- Mouse buttons line -->
+  <line x1="76" y1="388" x2="436" y2="388" stroke="#30363d" stroke-width="3" />
+  <line x1="256" y1="388" x2="256" y2="430" stroke="#30363d" stroke-width="3" />
+</svg>

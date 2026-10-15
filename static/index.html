@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Windows Fernsteuerung</title>
+  
+  <!-- Apple iOS Web App Meta Tags -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="RemotePC">
+  <link rel="apple-touch-icon" href="/icon.svg">
+  <link rel="manifest" href="/manifest.json">
+  
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div id="app" class="app-container">
+    
+    <!-- Oberer Header mit Status und Schnellfunktionen -->
+    <header class="top-bar">
+      <div class="status-group">
+        <span id="status-indicator" class="status-dot disconnected"></span>
+        <span id="status-text" class="status-text">Verbinde...</span>
+        <span id="latency-badge" class="latency-badge hidden">-- ms</span>
+      </div>
+
+      <div class="actions-group">
+        <!-- Native Tastatur Trigger Button -->
+        <button id="btn-native-kbd" class="icon-btn" title="iOS Tastatur / Diktieren" aria-label="iOS Tastatur">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+            <path d="M20 5H4c-1.1 0-1.99.9-1.99 2L2 17c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm-9 3h2v2h-2V8zm0 3h2v2h-2v-2zM8 8h2v2H8V8zm0 3h2v2H8v-2zm-1 2H5v-2h2v2zm0-3H5V8h2v2zm9 7H8v-2h8v2zm0-4h-2v-2h2v2zm0-3h-2V8h2v2zm3 3h-2v-2h2v2zm0-3h-2V8h2v2z"/>
+          </svg>
+        </button>
+
+        <!-- Virtuelle Tastatur Toggle Button -->
+        <button id="btn-toggle-kbd" class="icon-btn" title="QWERTZ Tastatur einblenden" aria-label="Tastatur">
+          ⌨️
+        </button>
+
+        <!-- Einstellungen Toggle Button -->
+        <button id="btn-settings" class="icon-btn" title="Einstellungen" aria-label="Einstellungen">
+          ⚙️
+        </button>
+
+        <!-- Vollbild Button -->
+        <button id="btn-fullscreen" class="icon-btn" title="Vollbild" aria-label="Vollbild">
+          ⛶
+        </button>
+      </div>
+    </header>
+
+    <!-- Schnellleiste: Windows-Funktionstasten -->
+    <section class="quick-keys-bar" id="quick-keys-bar">
+      <button class="key-btn mod-key" data-key="Control" id="mod-ctrl">Strg</button>
+      <button class="key-btn mod-key" data-key="Alt" id="mod-alt">Alt</button>
+      <button class="key-btn mod-key" data-key="Shift" id="mod-shift">Shift</button>
+      <button class="key-btn mod-key" data-key="Meta" id="mod-win">⊞ Win</button>
+      <div class="divider"></div>
+      <button class="key-btn" data-key="Escape">Esc</button>
+      <button class="key-btn" data-key="Tab">Tab</button>
+      <button class="key-btn" data-key="Enter">Enter</button>
+      <button class="key-btn" data-key="Backspace">⌫</button>
+      <button class="key-btn" data-key="Delete">Entf</button>
+      <div class="divider"></div>
+      <button class="key-btn shortcut-btn" data-combo="Alt+Tab">Alt+Tab</button>
+      <button class="key-btn shortcut-btn" data-combo="Meta+d">Win+D</button>
+      <button class="key-btn shortcut-btn" data-combo="Meta+e">Explorer</button>
+      <div class="divider"></div>
+      <!-- Media Keys -->
+      <button class="key-btn media-btn" data-media="VolumeMute" title="Stumm">🔇</button>
+      <button class="key-btn media-btn" data-media="VolumeDown" title="Leiser">🔉</button>
+      <button class="key-btn media-btn" data-media="VolumeUp" title="Lauter">🔊</button>
+      <button class="key-btn media-btn" data-media="MediaPlayPause" title="Play/Pause">⏯️</button>
+    </section>
+
+    <!-- Hauptbereich: Großflächiges Multi-Touch Trackpad -->
+    <main class="trackpad-container" id="trackpad">
+      <div class="trackpad-hint" id="trackpad-hint">
+        <div class="gesture-item"><span>👆</span> 1 Finger: Bewegen & Klick</div>
+        <div class="gesture-item"><span>✌️</span> 2 Finger: Scrollen & Rechtsklick</div>
+      </div>
+      
+      <!-- Visuelle Berührungspunkte -->
+      <div id="touch-markers" class="touch-markers"></div>
+    </main>
+
+    <!-- Dedizierte Maustasten unten am Bildschirm -->
+    <footer class="mouse-buttons-bar">
+      <button id="btn-mouse-left" class="mouse-btn left-btn">
+        <span class="btn-label">Linksklick</span>
+      </button>
+      <button id="btn-drag-lock" class="mouse-btn drag-btn" title="Drag & Drop Halten">
+        <span class="btn-label">Halten (Drag)</span>
+      </button>
+      <button id="btn-mouse-middle" class="mouse-btn middle-btn">
+        <span class="btn-label">Mitte</span>
+      </button>
+      <button id="btn-mouse-right" class="mouse-btn right-btn">
+        <span class="btn-label">Rechtsklick</span>
+      </button>
+    </footer>
+
+    <!-- Ausklappbare / Vollwertige Deutsche QWERTZ Tastatur -->
+    <div id="keyboard-drawer" class="keyboard-drawer hidden">
+      <div class="drawer-header">
+        <span class="drawer-title">Tastatur (QWERTZ)</span>
+        <!-- Pfeiltasten im Drawer Header -->
+        <div class="arrow-keys-group">
+          <button class="key-btn arrow-btn" data-key="ArrowUp">▲</button>
+          <button class="key-btn arrow-btn" data-key="ArrowLeft">◄</button>
+          <button class="key-btn arrow-btn" data-key="ArrowDown">▼</button>
+          <button class="key-btn arrow-btn" data-key="ArrowRight">►</button>
+        </div>
+        <button id="btn-close-kbd" class="drawer-close-btn">&times;</button>
+      </div>
+
+      <!-- F-Tasten Reihe -->
+      <div class="kbd-row f-row">
+        <button class="key-btn kbd-key small-key" data-key="F1">F1</button>
+        <button class="key-btn kbd-key small-key" data-key="F2">F2</button>
+        <button class="key-btn kbd-key small-key" data-key="F3">F3</button>
+        <button class="key-btn kbd-key small-key" data-key="F4">F4</button>
+        <button class="key-btn kbd-key small-key" data-key="F5">F5</button>
+        <button class="key-btn kbd-key small-key" data-key="F6">F6</button>
+        <button class="key-btn kbd-key small-key" data-key="F7">F7</button>
+        <button class="key-btn kbd-key small-key" data-key="F8">F8</button>
+        <button class="key-btn kbd-key small-key" data-key="F9">F9</button>
+        <button class="key-btn kbd-key small-key" data-key="F10">F10</button>
+        <button class="key-btn kbd-key small-key" data-key="F11">F11</button>
+        <button class="key-btn kbd-key small-key" data-key="F12">F12</button>
+      </div>
+
+      <!-- QWERTZ Reihe 1: Zahlen -->
+      <div class="kbd-row">
+        <button class="key-btn kbd-key" data-char="^">^</button>
+        <button class="key-btn kbd-key" data-char="1">1</button>
+        <button class="key-btn kbd-key" data-char="2">2</button>
+        <button class="key-btn kbd-key" data-char="3">3</button>
+        <button class="key-btn kbd-key" data-char="4">4</button>
+        <button class="key-btn kbd-key" data-char="5">5</button>
+        <button class="key-btn kbd-key" data-char="6">6</button>
+        <button class="key-btn kbd-key" data-char="7">7</button>
+        <button class="key-btn kbd-key" data-char="8">8</button>
+        <button class="key-btn kbd-key" data-char="9">9</button>
+        <button class="key-btn kbd-key" data-char="0">0</button>
+        <button class="key-btn kbd-key" data-char="ß">ß</button>
+        <button class="key-btn kbd-key" data-char="´">´</button>
+        <button class="key-btn kbd-key backspace-key" data-key="Backspace">⌫</button>
+      </div>
+
+      <!-- QWERTZ Reihe 2: QWERTZ -->
+      <div class="kbd-row">
+        <button class="key-btn kbd-key tab-key" data-key="Tab">Tab</button>
+        <button class="key-btn kbd-key" data-char="q">q</button>
+        <button class="key-btn kbd-key" data-char="w">w</button>
+        <button class="key-btn kbd-key" data-char="e">e</button>
+        <button class="key-btn kbd-key" data-char="r">r</button>
+        <button class="key-btn kbd-key" data-char="t">t</button>
+        <button class="key-btn kbd-key" data-char="z">z</button>
+        <button class="key-btn kbd-key" data-char="u">u</button>
+        <button class="key-btn kbd-key" data-char="i">i</button>
+        <button class="key-btn kbd-key" data-char="o">o</button>
+        <button class="key-btn kbd-key" data-char="p">p</button>
+        <button class="key-btn kbd-key" data-char="ü">ü</button>
+        <button class="key-btn kbd-key" data-char="+">+</button>
+      </div>
+
+      <!-- QWERTZ Reihe 3: ASDF -->
+      <div class="kbd-row">
+        <button class="key-btn kbd-key lock-key" id="kbd-caps" data-key="CapsLock">Caps</button>
+        <button class="key-btn kbd-key" data-char="a">a</button>
+        <button class="key-btn kbd-key" data-char="s">s</button>
+        <button class="key-btn kbd-key" data-char="d">d</button>
+        <button class="key-btn kbd-key" data-char="f">f</button>
+        <button class="key-btn kbd-key" data-char="g">g</button>
+        <button class="key-btn kbd-key" data-char="h">h</button>
+        <button class="key-btn kbd-key" data-char="j">j</button>
+        <button class="key-btn kbd-key" data-char="k">k</button>
+        <button class="key-btn kbd-key" data-char="l">l</button>
+        <button class="key-btn kbd-key" data-char="ö">ö</button>
+        <button class="key-btn kbd-key" data-char="ä">ä</button>
+        <button class="key-btn kbd-key" data-char="#">#</button>
+        <button class="key-btn kbd-key enter-key" data-key="Enter">⏎</button>
+      </div>
+
+      <!-- QWERTZ Reihe 4: YXCV -->
+      <div class="kbd-row">
+        <button class="key-btn kbd-key shift-key mod-key" data-key="Shift">⇧</button>
+        <button class="key-btn kbd-key" data-char="<">&lt;</button>
+        <button class="key-btn kbd-key" data-char="y">y</button>
+        <button class="key-btn kbd-key" data-char="x">x</button>
+        <button class="key-btn kbd-key" data-char="c">c</button>
+        <button class="key-btn kbd-key" data-char="v">v</button>
+        <button class="key-btn kbd-key" data-char="b">b</button>
+        <button class="key-btn kbd-key" data-char="n">n</button>
+        <button class="key-btn kbd-key" data-char="m">m</button>
+        <button class="key-btn kbd-key" data-char=",">,</button>
+        <button class="key-btn kbd-key" data-char=".">.</button>
+        <button class="key-btn kbd-key" data-char="-">-</button>
+        <button class="key-btn kbd-key shift-key mod-key" data-key="Shift">⇧</button>
+      </div>
+
+      <!-- QWERTZ Reihe 5: Leertaste & Modifikatoren -->
+      <div class="kbd-row">
+        <button class="key-btn kbd-key mod-key" data-key="Control">Strg</button>
+        <button class="key-btn kbd-key mod-key" data-key="Meta">⊞</button>
+        <button class="key-btn kbd-key mod-key" data-key="Alt">Alt</button>
+        <button class="key-btn kbd-key space-key" data-char=" ">Leerzeichen</button>
+        <button class="key-btn kbd-key mod-key" data-key="AltGraph">AltGr</button>
+        <button class="key-btn kbd-key" data-key="Escape">Esc</button>
+      </div>
+    </div>
+
+    <!-- Verstecktes Eingabefeld für native iOS-Tastatur & Diktierfunktion -->
+    <input type="text" id="hidden-text-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="text" style="position: absolute; opacity: 0; left: -9999px; top: -9999px; pointer-events: none;">
+
+    <!-- Einstellungs-Modal -->
+    <div id="settings-modal" class="modal-overlay hidden">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3>Einstellungen</h3>
+          <button id="btn-close-settings" class="drawer-close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="setting-item">
+            <label for="slider-sensitivity">Zeiger-Geschwindigkeit:</label>
+            <div class="slider-row">
+              <input type="range" id="slider-sensitivity" min="0.5" max="3.0" step="0.1" value="1.3">
+              <span id="label-sensitivity">1.3x</span>
+            </div>
+          </div>
+          
+          <div class="setting-item">
+            <label for="slider-scroll-speed">Scroll-Geschwindigkeit:</label>
+            <div class="slider-row">
+              <input type="range" id="slider-scroll-speed" min="0.5" max="3.0" step="0.1" value="1.0">
+              <span id="label-scroll-speed">1.0x</span>
+            </div>
+          </div>
+
+          <div class="setting-item">
+            <label class="checkbox-row">
+              <input type="checkbox" id="check-natural-scroll" checked>
+              <span>Natürliches Scrollen (wie auf iPad/Mac)</span>
+            </label>
+          </div>
+
+          <div class="setting-item">
+            <label class="checkbox-row">
+              <input type="checkbox" id="check-haptics" checked>
+              <span>Taktiles Feedback (Haptik / Vibration)</span>
+            </label>
+          </div>
+
+          <div class="setting-item">
+            <label for="input-manual-token">Kopplungs-Token:</label>
+            <input type="text" id="input-manual-token" class="text-field" placeholder="Token aus Konsole">
+            <button id="btn-save-token" class="action-btn">Token speichern & Neu verbinden</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Kopplungs-Modal (wird gezeigt wenn kein gültiger Token vorhanden ist) -->
+    <div id="pairing-modal" class="modal-overlay hidden">
+      <div class="modal-card">
+        <h3>🔒 Rechner-Kopplung</h3>
+        <p class="modal-desc">Gib den Sicherheitstoken ein, der in der Konsole auf dem Windows-PC angezeigt wird, oder scanne den QR-Code erneut mit deiner Kamera.</p>
+        <input type="text" id="input-pairing-token" class="text-field" placeholder="Token hier einfügen...">
+        <button id="btn-connect-pairing" class="action-btn">Verbinden</button>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
