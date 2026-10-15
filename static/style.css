@@ -1,17 +1,17 @@
 :root {
-  --bg-primary: #0f1117;
-  --bg-secondary: #161b22;
-  --bg-card: #21262d;
-  --bg-btn: #2d333b;
-  --bg-btn-active: #388bfd;
+  --bg-primary: #000000;
+  --bg-secondary: #000000;
+  --bg-card: #0a0c10;
+  --bg-btn: #12151c;
+  --bg-btn-active: #1f6feb;
   --text-main: #f0f6fc;
   --text-muted: #8b949e;
   --accent: #38bdf8;
-  --accent-glow: rgba(56, 189, 248, 0.35);
+  --accent-glow: rgba(56, 189, 248, 0.45);
   --danger: #f85149;
   --success: #3fb950;
-  --border: #30363d;
-  --trackpad-bg: #13171f;
+  --border: #1c2128;
+  --trackpad-bg: #000000;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
@@ -190,6 +190,12 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.trackpad-container.dragging {
+  box-shadow: inset 0 0 25px rgba(56, 189, 248, 0.35);
+  border: 1px solid var(--accent);
 }
 
 .trackpad-hint {
@@ -232,10 +238,10 @@ html, body {
   transition: opacity 0.2s ease;
 }
 
-/* Maustasten unten */
+/* Maustasten unten (3 Spalten: Links, Mitte, Rechts) */
 .mouse-buttons-bar {
   display: grid;
-  grid-template-columns: 2fr 1.5fr 1fr 2fr;
+  grid-template-columns: 2fr 1fr 2fr;
   gap: 8px;
   padding: 8px 10px;
   background-color: var(--bg-secondary);
@@ -262,12 +268,6 @@ html, body {
   background: var(--accent);
   color: #000;
   transform: translateY(2px);
-}
-
-.mouse-btn.drag-btn.locked {
-  background: #e3b341;
-  color: #000;
-  box-shadow: 0 0 10px rgba(227, 179, 65, 0.4);
 }
 
 /* Tastatur Drawer */

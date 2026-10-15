@@ -9,6 +9,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="RemotePC">
+  <meta name="theme-color" content="#000000">
   <link rel="apple-touch-icon" href="/icon.svg">
   <link rel="manifest" href="/manifest.json">
   
@@ -71,13 +72,15 @@
       <button class="key-btn media-btn" data-media="VolumeMute" title="Stumm">🔇</button>
       <button class="key-btn media-btn" data-media="VolumeDown" title="Leiser">🔉</button>
       <button class="key-btn media-btn" data-media="VolumeUp" title="Lauter">🔊</button>
+      <button class="key-btn media-btn" data-media="MediaPrevTrack" title="Vorheriger Titel">⏮️</button>
       <button class="key-btn media-btn" data-media="MediaPlayPause" title="Play/Pause">⏯️</button>
+      <button class="key-btn media-btn" data-media="MediaNextTrack" title="Nächster Titel">⏭️</button>
     </section>
 
     <!-- Hauptbereich: Großflächiges Multi-Touch Trackpad -->
     <main class="trackpad-container" id="trackpad">
       <div class="trackpad-hint" id="trackpad-hint">
-        <div class="gesture-item"><span>👆</span> 1 Finger: Bewegen & Klick</div>
+        <div class="gesture-item"><span>👆</span> 1 Finger: Bewegen & Tippen (Doppeltippen & Halten: Drag)</div>
         <div class="gesture-item"><span>✌️</span> 2 Finger: Scrollen & Rechtsklick</div>
       </div>
       
@@ -89,9 +92,6 @@
     <footer class="mouse-buttons-bar">
       <button id="btn-mouse-left" class="mouse-btn left-btn">
         <span class="btn-label">Linksklick</span>
-      </button>
-      <button id="btn-drag-lock" class="mouse-btn drag-btn" title="Drag & Drop Halten">
-        <span class="btn-label">Halten (Drag)</span>
       </button>
       <button id="btn-mouse-middle" class="mouse-btn middle-btn">
         <span class="btn-label">Mitte</span>
@@ -241,7 +241,7 @@
 
           <div class="setting-item">
             <label class="checkbox-row">
-              <input type="checkbox" id="check-natural-scroll" checked>
+              <input type="checkbox" id="check-natural-scroll">
               <span>Natürliches Scrollen (wie auf iPad/Mac)</span>
             </label>
           </div>

@@ -18,7 +18,7 @@
     // Einstellungen
     sensitivity: 1.3,
     scrollSpeed: 1.0,
-    naturalScroll: true,
+    naturalScroll: false,
     haptics: true,
     
     // Modifier Status (Strg, Alt, Shift, Win)
@@ -29,9 +29,8 @@
       Meta: false,
     },
     capsLock: false,
-    dragLocked: false,
 
-    // Touchpad Tracking
+    // Touchpad Tracking & Tap-to-Drag
     touches: {},
     touchStartTime: 0,
     touchStartCount: 0,
@@ -39,6 +38,13 @@
     totalMovement: 0,
     pendingMouseMove: { dx: 0, dy: 0 },
     rafScheduled: false,
+
+    // Tap-to-Drag State
+    lastTapTime: 0,
+    lastTapPos: { x: 0, y: 0 },
+    singleTapTimer: null,
+    potentialDrag: false,
+    isDragging: false,
   };
 
   // Shift & AltGr mappings for German QWERTZ layout
@@ -62,7 +68,6 @@
     btnMouseLeft: document.getElementById('btn-mouse-left'),
     btnMouseRight: document.getElementById('btn-mouse-right'),
     btnMouseMiddle: document.getElementById('btn-mouse-middle'),
-    btnDragLock: document.getElementById('btn-drag-lock'),
     
     // Header & Tools
     btnNativeKbd: document.getElementById('btn-native-kbd'),
@@ -246,7 +251,8 @@
   function onTouchStart(e) {
     e.preventDefault();
     const touchList = e.touches;
-    state.touchStartTime = performance.now();
+    const now = performance.now();
+    state.touchStartTime = now;
     state.touchStartCount = touchList.length;
     state.totalMovement = 0;
 
@@ -257,6 +263,30 @@
       const t = touchList[i];
       state.touches[t.identifier] = { x: t.clientX, y: t.clientY };
       state.initialTouchPositions[t.identifier] = { x: t.clientX, y: t.clientY };
+    }
+
+    // Tap-to-Drag Erkennung bei 1 Finger (Doppeltippen & Halten)
+    if (touchList.length === 1) {
+      const t = touchList[0];
+      const timeSinceLastTap = now - state.lastTapTime;
+      const distFromLastTap = Math.hypot(t.clientX - state.lastTapPos.x, t.clientY - state.lastTapPos.y);
+
+      // Zweiter Tap innerhalb von 320ms und im Umkreis von 40px
+      if (timeSinceLastTap < 320 && distFromLastTap < 40) {
+        if (state.singleTapTimer) {
+          clearTimeout(state.singleTapTimer);
+          state.singleTapTimer = null;
+        }
+        state.potentialDrag = true;
+      } else {
+        state.potentialDrag = false;
+      }
+    } else {
+      state.potentialDrag = false;
+      if (state.singleTapTimer) {
+        clearTimeout(state.singleTapTimer);
+        state.singleTapTimer = null;
+      }
     }
 
     if (el.trackpadHint) {
@@ -271,10 +301,23 @@
     const touchList = e.touches;
     updateTouchMarkers(touchList);
 
-    // 1-Finger Mausbewegung
+    // 1-Finger Mausbewegung oder Drag
     if (touchList.length === 1 && state.touchStartCount === 1) {
       const t = touchList[0];
+      const initial = state.initialTouchPositions[t.identifier];
       const prev = state.touches[t.identifier];
+
+      // Drag-Aktivierung prüfen
+      if (state.potentialDrag && !state.isDragging && initial) {
+        const movedSinceStart = Math.hypot(t.clientX - initial.x, t.clientY - initial.y);
+        if (movedSinceStart > 5) {
+          state.isDragging = true;
+          send({ type: 'MouseDown', button: 'Left' });
+          vibrate(25);
+          if (el.trackpad) el.trackpad.classList.add('dragging');
+        }
+      }
+
       if (prev) {
         let dx = (t.clientX - prev.x) * state.sensitivity;
         let dy = (t.clientY - prev.y) * state.sensitivity;
@@ -311,16 +354,24 @@
 
         state.totalMovement += Math.hypot(avgDx, avgDy);
 
+        // Scrollrichtung:
+        // Windows Win32 API:
+        // delta > 0 = Wheel forward = Scroll UP
+        // delta < 0 = Wheel backward = Scroll DOWN
+        // Standard Windows: Finger nach UNTEN wischen (avgDy > 0) scrollt nach UNTEN (delta < 0).
+        let scrollDy = -avgDy;
+        let scrollDx = -avgDx;
+
         if (state.naturalScroll) {
-          avgDy = -avgDy;
-          avgDx = -avgDx;
+          scrollDy = avgDy;
+          scrollDx = avgDx;
         }
 
         const scrollMultiplier = 3.5 * state.scrollSpeed;
         send({
           type: 'MouseWheel',
-          dx: Math.round(avgDx * scrollMultiplier),
-          dy: Math.round(avgDy * scrollMultiplier),
+          dx: Math.round(scrollDx * scrollMultiplier),
+          dy: Math.round(scrollDy * scrollMultiplier),
         });
       }
 
@@ -331,19 +382,44 @@
 
   function onTouchEnd(e) {
     e.preventDefault();
-    const duration = performance.now() - state.touchStartTime;
+    const now = performance.now();
+    const duration = now - state.touchStartTime;
     const isQuickTap = duration < 250 && state.totalMovement < 12;
 
-    if (isQuickTap) {
-      if (state.touchStartCount === 1) {
-        // 1-Finger Tap = Linksklick
+    // 1. Wenn aktiver Drag-Vorgang lief: Beenden
+    if (state.isDragging) {
+      send({ type: 'MouseUp', button: 'Left' });
+      state.isDragging = false;
+      state.potentialDrag = false;
+      state.lastTapTime = 0;
+      vibrate(15);
+      if (el.trackpad) el.trackpad.classList.remove('dragging');
+    }
+    // 2. Wenn zweiter Tap ohne Drag-Bewegung losgelassen wurde = Doppelklick
+    else if (state.potentialDrag) {
+      state.potentialDrag = false;
+      state.lastTapTime = 0;
+      vibrate(20);
+      send({ type: 'MouseClick', button: 'Left' });
+      send({ type: 'MouseClick', button: 'Left' });
+    }
+    // 3. Wenn schneller 1-Finger Tap = Klick (mit kurzem Warten auf möglichen 2. Tap)
+    else if (isQuickTap && state.touchStartCount === 1) {
+      const touchId = Object.keys(state.initialTouchPositions)[0];
+      const pos = touchId ? state.initialTouchPositions[touchId] : { x: 0, y: 0 };
+      state.lastTapTime = now;
+      state.lastTapPos = { x: pos.x, y: pos.y };
+
+      state.singleTapTimer = setTimeout(() => {
+        state.singleTapTimer = null;
         vibrate(15);
         send({ type: 'MouseClick', button: 'Left' });
-      } else if (state.touchStartCount === 2) {
-        // 2-Finger Tap = Rechtsklick
-        vibrate(25);
-        send({ type: 'MouseClick', button: 'Right' });
-      }
+      }, 260);
+    }
+    // 4. Wenn schneller 2-Finger Tap = Rechtsklick
+    else if (isQuickTap && state.touchStartCount === 2) {
+      vibrate(25);
+      send({ type: 'MouseClick', button: 'Right' });
     }
 
     if (e.touches.length === 0) {
@@ -423,19 +499,6 @@
       send({ type: 'MouseDown', button: 'Middle' });
     }, () => {
       send({ type: 'MouseUp', button: 'Middle' });
-    });
-
-    // Drag-Lock (Einrasten)
-    el.btnDragLock.addEventListener('click', () => {
-      vibrate(25);
-      state.dragLocked = !state.dragLocked;
-      el.btnDragLock.classList.toggle('locked', state.dragLocked);
-
-      if (state.dragLocked) {
-        send({ type: 'MouseDown', button: 'Left' });
-      } else {
-        send({ type: 'MouseUp', button: 'Left' });
-      }
     });
   }
 
