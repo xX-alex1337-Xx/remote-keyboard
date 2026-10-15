@@ -6,6 +6,9 @@
 [![Memory](https://img.shields.io/badge/RAM-~8%20MB-brightgreen.svg)](#performance--ressourcen)
 
 Ein ultra-leichtgewichtiger, ressourcenschonender Rust-Webserver zur nahtlosen Fernsteuerung von Windows-PCs über das iPad oder iPhone im lokalen Netzwerk. Bietet ein responsives Touch-Trackpad und eine deutsche QWERTZ-Tastatur direkt im mobilen Browser – ganz ohne App-Store-Download auf dem Mobilgerät.
+<p align="center">
+  <img src="docs/screenshot.png" alt="Windows Remote Steuerung Flyout & Tray Icon" width="380">
+</p>
 
 ---
 
