@@ -44,7 +44,15 @@ unsafe impl Sync for TrayAppContext {}
 
 static APP_CTX: OnceLock<TrayAppContext> = OnceLock::new();
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() {
+    if let Err(e) = run() {
+        let dir = remote_keyboard_lib::config::get_config_dir();
+        let _ = std::fs::create_dir_all(&dir);
+        let _ = std::fs::write(dir.join("error.log"), format!("Fehler beim Starten: {}\n", e));
+    }
+}
+
+fn run() -> Result<(), Box<dyn std::error::Error>> {
     // Konfiguration laden
     let config = Arc::new(Mutex::new(AppConfig::load_or_create()));
     let (port, token) = {
@@ -57,15 +65,34 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Axum Webserver im Hintergrund starten
     let auth_clone = auth.clone();
     std::thread::spawn(move || {
-        let rt = tokio::runtime::Runtime::new().unwrap();
-        rt.block_on(async move {
-            let app_state = AppState { auth: auth_clone };
-            let app = create_router(app_state);
-            let addr = SocketAddr::from(([0, 0, 0, 0], port));
-            if let Ok(listener) = tokio::net::TcpListener::bind(addr).await {
-                let _ = axum::serve(listener, app).await;
+        let dir = remote_keyboard_lib::config::get_config_dir();
+        let _ = std::fs::create_dir_all(&dir);
+        let log_file = dir.join("server.log");
+        let _ = std::fs::write(&log_file, format!("Starte Background Server auf Port {}...\n", port));
+
+        match tokio::runtime::Builder::new_multi_thread().enable_all().build() {
+            Ok(rt) => {
+                rt.block_on(async move {
+                    let app_state = AppState { auth: auth_clone };
+                    let app = create_router(app_state);
+                    let addr = SocketAddr::from(([0, 0, 0, 0], port));
+                    match tokio::net::TcpListener::bind(addr).await {
+                        Ok(listener) => {
+                            let _ = std::fs::write(&log_file, format!("Server gebunden an {}\n", addr));
+                            if let Err(e) = axum::serve(listener, app).await {
+                                let _ = std::fs::write(dir.join("server_err.log"), format!("Server Error: {}\n", e));
+                            }
+                        }
+                        Err(e) => {
+                            let _ = std::fs::write(dir.join("server_err.log"), format!("Bind Error: {}\n", e));
+                        }
+                    }
+                });
             }
-        });
+            Err(e) => {
+                let _ = std::fs::write(dir.join("server_err.log"), format!("Runtime Error: {}\n", e));
+            }
+        }
     });
 
     // Win32 GUI & Tray Initialisierung
@@ -163,12 +190,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             nid,
         });
 
+        let dir = remote_keyboard_lib::config::get_config_dir();
+        let _ = std::fs::write(dir.join("ui.log"), format!("Tray & Fenster erstellt. Starte Message Loop...\n"));
+
         // Message Loop
         let mut msg = MSG::default();
         while GetMessageW(&mut msg, None, 0, 0).as_bool() {
             let _ = TranslateMessage(&msg);
             DispatchMessageW(&msg);
         }
+
+        let _ = std::fs::write(dir.join("ui.log"), format!("Message Loop beendet mit msg: {}\n", msg.message));
 
         // Aufräumen beim Beenden
         if let Some(ctx) = APP_CTX.get() {
