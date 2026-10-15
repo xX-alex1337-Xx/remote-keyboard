@@ -53,6 +53,7 @@ $WshShell = New-Object -ComObject WScript.Shell
 $Shortcut = $WshShell.CreateShortcut($ShortcutPath)
 $Shortcut.TargetPath = $TargetExe
 $Shortcut.WorkingDirectory = $InstallDir
+$Shortcut.IconLocation = "$TargetExe,0"
 $Shortcut.Description = "Windows Fernsteuerung via iPad/iPhone Tastatur & Trackpad"
 $Shortcut.Save()
 
